@@ -12,7 +12,7 @@ void setup() {
  
 void loop() {
   digitalWrite(PINLED, HIGH);   // зажигаем светодиод
-  delay(1000);              // ждем секунду
+  delay(5000);              // ждем x/1000 секунд
   digitalWrite(PINLED, LOW);    // выключаем светодиод
-  delay(1000);              // ждем секунду
+  delay(1000);              // ждем x/1000 секунд
 }

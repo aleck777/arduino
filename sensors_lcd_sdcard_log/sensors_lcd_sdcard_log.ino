@@ -14,8 +14,6 @@
 #include <SPI.h>
 #include <SD.h>
 
-// #include <DHT.h>
-
 #include <RTClib.h>
 
 // Библиотеки для температурного датчика ds18b20
@@ -68,7 +66,7 @@ void statusBlink (boolean status) {
   return;
 }
 
-
+// Функция логгирования на SD-карту
 void dataLogging(String str ) {
     DateTime now = rtc.now();
     
@@ -103,7 +101,7 @@ void dataLogging(String str ) {
   
 }
 
-// function to logging the temperature for a device
+// Функция чтения температуры с датчика и логирования на карту
 void logTemperature(DeviceAddress deviceAddress)
 {  
   float tempC = sensors.getTempC(deviceAddress);
@@ -111,6 +109,8 @@ void logTemperature(DeviceAddress deviceAddress)
   logString += String(tempC);
   dataLogging(logString);
 }
+
+
 
 void setup() {
   #if defined (Debug)
@@ -176,11 +176,7 @@ void setup() {
     logString = "Разрешение 0го датчика: ";
     logString += String(resolution);
     dataLogging(logString);
-  
-  }
-  
-
-
+  }  
 }
 
 

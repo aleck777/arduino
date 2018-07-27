@@ -8,6 +8,8 @@
 #define SD_CHIP_SELECT 4 // SD-карта на плате Ethernet
 // #define SD_CHIP_SELECT 10 // SD-карта на плате LogShield
 #define earth_ds18b20 32 // пин для датчика почвы
+#define DHT11_PIN 22
+#define DHTTYPE DHT11
 
 
 // include the SD library:
@@ -19,6 +21,8 @@
 // Библиотеки для температурного датчика ds18b20
 #include <OneWire.h>
 #include <DallasTemperature.h>
+
+#include <DHT.h>
 
 
 // Переменная для часов реального времени
@@ -41,6 +45,8 @@ boolean sdStatus;
 
 int count;
 long timeForDelay; 
+
+DHT dht(DHT11_PIN, DHTTYPE);
 
 
 // Функция моргания (ошибка - быстро, нет ошибки - медленно)
@@ -105,7 +111,7 @@ void dataLogging(String str ) {
 void logTemperature(DeviceAddress deviceAddress)
 {  
   float tempC = sensors.getTempC(deviceAddress);
-  String logString = "Temp C: ";
+  String logString = "Температура почвы: ";
   logString += String(tempC);
   dataLogging(logString);
 }
@@ -142,7 +148,11 @@ void setup() {
   sdStatus = SD.begin(SD_CHIP_SELECT);
   statusBlink(sdStatus);
   delay(2000);
-
+  
+    #if defined (Debug)
+       Serial.println("Запускаем DHT11"); 
+    #endif   
+    dht.begin();
 
   if (sdStatus) {
     dataLogging("Reboot");
@@ -181,6 +191,10 @@ void setup() {
 
 
 void loop() {
+      #if defined (Debug)
+       Serial.print("Цикл: ");
+       Serial.println(count);; 
+      #endif   
 
   if (sdStatus) {
    DateTime now = rtc.now();
@@ -204,15 +218,42 @@ void loop() {
       #endif   
       logTemperature(devAddEarthTemp);
 
-     digitalWrite(greenLEDpin, HIGH);   
-     delay(5000);              
-     digitalWrite(greenLEDpin, LOW);    
-     delay(5000); 
-     timeForDelay = timeNow;
-   } 
+      // Логирование датчика температуры и влажности 
+      int chk;
+      #if defined (Debug)
+        Serial.println("Логируем данные с температуры + влажности: DHT11"); 
+      #endif   
+
+      // Reading temperature or humidity takes about 250 milliseconds!
+      // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+      float h = dht.readHumidity();
+      // Read temperature as Celsius (the default)
+      float t = dht.readTemperature();
+       
+      #if defined (Debug)
+          Serial.print("Влажность: ");
+          Serial.print(h);
+          Serial.print(" %\t");
+          Serial.print("Температура: ");
+          Serial.print(t);
+          Serial.println(" *C ");
+      #endif
+      dataString = "Влажность воздуха:";  
+      dataString += String(h);
+      dataLogging(dataString);
+      dataString = "Температура воздуха:";  
+      dataString += String(t);
+      dataLogging(dataString);
+
+      timeForDelay = timeNow;
+      digitalWrite(greenLEDpin, HIGH);   
+      delay(5000);              
+      digitalWrite(greenLEDpin, LOW);    
+      delay(5000); 
+     
+    } 
   } 
   statusBlink(sdStatus);
-
 }
 
 

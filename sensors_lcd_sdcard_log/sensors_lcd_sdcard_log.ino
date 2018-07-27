@@ -53,7 +53,7 @@ DHT dht(DHT11_PIN, DHTTYPE);
 void statusBlink (boolean status) {
     if (! status) {
     // при ошибке - моргаем быстро
-    for (int i=0; i<20; i++) {
+    for (int i=0; i<10; i++) {
       digitalWrite(redLEDpin, HIGH);   
       delay(100);              
       digitalWrite(redLEDpin, LOW);    
@@ -61,11 +61,11 @@ void statusBlink (boolean status) {
     }
   } else {
     // без ошибки - моргаем медленно
-    for (int i=0; i<=2; i++) {
+    for (int i=0; i<=1; i++) {
       digitalWrite(redLEDpin, HIGH);   
       delay(1000);              
       digitalWrite(redLEDpin, LOW);    
-      delay(1000);              
+      delay(100);              
     }
     digitalWrite(redLEDpin, HIGH);   
   }
@@ -111,7 +111,7 @@ void dataLogging(String str ) {
 void logTemperature(DeviceAddress deviceAddress)
 {  
   float tempC = sensors.getTempC(deviceAddress);
-  String logString = "Температура почвы: ";
+  String logString = "Температура почвы1: ";
   logString += String(tempC);
   dataLogging(logString);
 }
@@ -191,12 +191,14 @@ void setup() {
 
 
 void loop() {
-      #if defined (Debug)
-       Serial.print("Цикл: ");
-       Serial.println(count);; 
-      #endif   
+  #if defined (Debug)
+   Serial.print("Цикл: ");
+   Serial.println(count); 
+  #endif   
 
   if (sdStatus) {
+   digitalWrite(greenLEDpin, HIGH);
+   
    DateTime now = rtc.now();
    // Устанавливаем переменные
    long timeNow = now.unixtime();
@@ -246,10 +248,8 @@ void loop() {
       dataLogging(dataString);
 
       timeForDelay = timeNow;
-      digitalWrite(greenLEDpin, HIGH);   
-      delay(5000);              
-      digitalWrite(greenLEDpin, LOW);    
-      delay(5000); 
+         
+      delay(5000);
      
     } 
   } 

@@ -43,9 +43,6 @@ DallasTemperature sensors(&oneWire);
 // arrays to hold device address
 DeviceAddress devAddEarthTemp;
 
-
-const char daysOfTheWeek[7][24] = {"Восресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"};
-
 const String DATA_LOG_FILE = "datalog.txt";
 
 boolean sdStatus;
@@ -122,12 +119,14 @@ void dataLogging(String str ) {
 }
 
 // Функция чтения температуры с датчика и логирования на карту
-float logTemperature(DeviceAddress deviceAddress)
+float logTemperature(DeviceAddress deviceAddress, boolean loggingOrNo)
 {  
   float tempC = sensors.getTempC(deviceAddress);
-  String logString = "Температура почвы: ";
-  logString += String(tempC);
-  dataLogging(logString);
+  if (loggingOrNo) {
+    String logString = "Температура почвы: ";
+    logString += String(tempC);
+    dataLogging(logString);
+  }
   return tempC;
 }
 
@@ -173,6 +172,7 @@ void setup() {
 //  pinMode(HumEarthPIN, INPUT);
   pinMode(HumEarthPIN, OUTPUT);
   pinMode(HumEarthAPIN, INPUT);
+  pinMode(HumEarthDPIN, INPUT);
 
 
   #if defined (Debug)
@@ -193,10 +193,8 @@ void setup() {
     lcd.setCursor(0, 1);
     lcd.print("SD card error");
   }
-  delay(2000);
    
-  statusBlink(sdStatus);
-  delay(2000);
+   statusBlink(sdStatus);
   
     #if defined (Debug)
        Serial.println("Запускаем DHT11"); 
@@ -240,6 +238,7 @@ void setup() {
 
 
 void loop() {
+  String dataString ;
   #if defined (Debug)
    Serial.print("Цикл: ");
    Serial.println(count); 
@@ -251,13 +250,15 @@ void loop() {
    DateTime now = rtc.now();
    // Устанавливаем переменные
    unsigned long timeNow = now.unixtime();
-   if (timeNow-timeForDelay > logTimer) {  
+   boolean loggingOrNo = (timeNow-timeForDelay > logTimer);
+   if (loggingOrNo) {  
      // Лоигрование значения счетчика
-     String dataString = "";
+     dataString = "";
      dataString += String(count);
      dataLogging(dataString);
      count++;
-
+   }
+   
      // Логирование значения датчика температуры
       #if defined (Debug)
        Serial.println("Посылаем команду на сенсор температуры"); 
@@ -267,41 +268,42 @@ void loop() {
       #if defined (Debug)
        Serial.println("Логируем данные с сенсора температуры"); 
       #endif   
-      float earthTemp = logTemperature(devAddEarthTemp);
+      float earthTemp = logTemperature(devAddEarthTemp, loggingOrNo);
       
       // Значения с датчика влажности почвы
-//      int dh=digitalRead(HumEarthPIN);
       digitalWrite(HumEarthPIN, HIGH);
       delay(50);   
       int ah=analogRead(HumEarthAPIN);
+      int dh=analogRead(HumEarthAPIN); // 1 если 
       digitalWrite(HumEarthPIN, LOW);
-      dataString = "Влажность почвы: ";  
-      dataString += String(ah);
-      dataString += " : ";  
-      dataString += String((1024-ah)/7.74);
-      dataString += "%";  
-      dataLogging(dataString);
-      // Логирование датчика температуры и влажности 
-      int chk;
-      #if defined (Debug)
-        Serial.println("Логируем данные с температуры + влажности: DHT11"); 
-      #endif   
-
+      if (loggingOrNo) {
+        dataString = "Влажность почвы: ";  
+        dataString += String(dh);
+        dataString += " : ";  
+        dataString += String(ah);
+        dataString += " : ";  
+        dataString += String((1024-ah)/7.74);
+        dataString += "%";  
+        dataLogging(dataString);
+        // Логирование датчика температуры и влажности 
+        // int chk;
+        #if defined (Debug)
+          Serial.println("Логируем данные с температуры + влажности: DHT11"); 
+        #endif   
+      }
       // Reading temperature or humidity takes about 250 milliseconds!
       // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
       float h = dht.readHumidity();
       // Read temperature as Celsius (the default)
       float t = dht.readTemperature();
-       
-      dataString = "Влажность воздуха:";  
-      dataString += String(h);
-      dataLogging(dataString);
-      dataString = "Температура воздуха:";  
-      dataString += String(t);
-      dataLogging(dataString);
-
-
-
+      if (loggingOrNo) {
+        dataString = "Влажность воздуха:";  
+        dataString += String(h);
+        dataLogging(dataString);
+        dataString = "Температура воздуха:";  
+        dataString += String(t);
+        dataLogging(dataString);
+      }
       // Вывод значений на экран 
       dataString = "Z:";   
       dataString += String(earthTemp);
@@ -318,11 +320,12 @@ void loop() {
       lcd.setCursor(0, 1);
       lcd.print(dataString);
       
-      timeForDelay = timeNow;
-         
-      delay(5000);
+      if (loggingOrNo) {
+        timeForDelay = timeNow;
+      }   
+      delay(1000);
      
-    } 
+     
   } 
   statusBlink(sdStatus);
 }

@@ -87,9 +87,7 @@ void statusBlink (boolean status) {
 void dataLogging(String str ) {
     DateTime now = rtc.now();
     
-    String dataString = "";
-
-    dataString += String(now.year());
+    String dataString = String(now.year());
     dataString += '-';
     dataString += String(now.month());
     dataString += '-';
@@ -104,18 +102,16 @@ void dataLogging(String str ) {
 
     dataString += str;
 
-
   File dataFile = SD.open(DATA_LOG_FILE, FILE_WRITE);
 
   // if the file is available, write to it:
   if (dataFile) {
     dataFile.println(dataString);
-    dataFile.close();
-    #if defined (Debug)
-       Serial.println(dataString); // print to the serial port too:
-    #endif    
+    dataFile.close(); 
   }
-  
+  #if defined (Debug)
+       Serial.println(dataString); // print to the serial port too:
+  #endif   
 }
 
 // Функция чтения температуры с датчика и логирования на карту
@@ -173,7 +169,7 @@ void setup() {
   pinMode(HumEarthPIN, OUTPUT);
   pinMode(HumEarthAPIN, INPUT);
   pinMode(HumEarthDPIN, INPUT);
-
+  pinMode(relayPIN, OUTPUT);
 
   #if defined (Debug)
        Serial.println("Проверяем SD-карту"); 
@@ -274,15 +270,16 @@ void loop() {
       digitalWrite(HumEarthPIN, HIGH);
       delay(50);   
       int ah=analogRead(HumEarthAPIN);
-      int dh=analogRead(HumEarthAPIN); // 1 если 
+      int dh=digitalRead(HumEarthDPIN); // 1 можно поливать, 0 - хватит поливать 
       digitalWrite(HumEarthPIN, LOW);
+      float earthHum = (1024-ah)/7.74;
       if (loggingOrNo) {
         dataString = "Влажность почвы: ";  
         dataString += String(dh);
         dataString += " : ";  
         dataString += String(ah);
         dataString += " : ";  
-        dataString += String((1024-ah)/7.74);
+        dataString += String(earthHum);
         dataString += "%";  
         dataLogging(dataString);
         // Логирование датчика температуры и влажности 
@@ -308,7 +305,7 @@ void loop() {
       dataString = "Z:";   
       dataString += String(earthTemp);
       dataString += "C  ";  
-      dataString += String((1024-ah)/7.74);   
+      dataString += String(earthHum);   
       dataString += "%";  
       lcd.setCursor(0, 0);
       lcd.print(dataString);
@@ -324,7 +321,16 @@ void loop() {
         timeForDelay = timeNow;
       }   
       delay(1000);
-     
+    if ((earthHum<69) and (dh==1) ) {
+      digitalWrite(relayPIN, HIGH);
+      lcd.setCursor(0, 1);
+      lcd.print("Relay ON         ");
+      delay(5000); // Задержка полива       
+      digitalWrite(relayPIN, LOW);
+      lcd.setCursor(0, 1);
+      lcd.print("Relay OFF        ");
+      delay(5000); // Задержка перед повторным поливом
+    }
      
   } 
   statusBlink(sdStatus);

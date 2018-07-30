@@ -300,14 +300,14 @@ void loop() {
 
 
       // Вывод значений на экран 
-      dataString = "З:";   
+      dataString = "Z:";   
       dataString += String(earthTemp);
       dataString += "C  ";  
       dataString += String((1024-ah)/7.74);   
       dataString += "%";  
       lcd.setCursor(0, 0);
       lcd.print(dataString);
-      dataString = "В:";   
+      dataString = "V:";   
       dataString += String(t);
       dataString += "C  ";  
       dataString += String(h);   

@@ -11,8 +11,11 @@
 #define DHT11_PIN 22
 #define DHTTYPE DHT11
 #define logTimer  10   // количество секунд для следующей записи
-#define HumEarthPIN 7   // PIN для подключения датчика влажности почвы
+#define HumEarthPIN 31   // PIN для подключения датчика влажности почвы (питание)
+#define HumEarthDPIN 33  // PIN для подключения датчика влажности почвы (значение полива)
 #define HumEarthAPIN A13   // PIN для подключения датчика влажности почвы
+
+#define relayPIN 29   // PIN для подключения релюшки
 
 // include the SD library:
 #include <SPI.h>

@@ -10,19 +10,24 @@
 #define earth_ds18b20 32 // пин для датчика почвы
 #define DHT11_PIN 22
 #define DHTTYPE DHT11
-
+#define logTimer  10   // количество секунд для следующей записи
+#define HumEarthPIN 7   // PIN для подключения датчика влажности почвы
+#define HumEarthAPIN A13   // PIN для подключения датчика влажности почвы
 
 // include the SD library:
 #include <SPI.h>
 #include <SD.h>
 
-#include <RTClib.h>
-
 // Библиотеки для температурного датчика ds18b20
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+// include the library code:
+#include <LiquidCrystal.h>
+
 #include <DHT.h>
+#include <RTClib.h>
+
 
 
 // Переменная для часов реального времени
@@ -39,14 +44,20 @@ DeviceAddress devAddEarthTemp;
 const char daysOfTheWeek[7][24] = {"Восресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"};
 
 const String DATA_LOG_FILE = "datalog.txt";
-const int logTimer = 30 ; // количество секунд для следующей записи
 
 boolean sdStatus;
 
 int count;
-long timeForDelay; 
+unsigned long timeForDelay; 
 
 DHT dht(DHT11_PIN, DHTTYPE);
+
+
+// initialize the library by associating any needed LCD interface pin
+// with the arduino pin number it is connected to
+const int rs = 47, en = 45, d4 = 43, d5 = 41, d6 = 39, d7 = 37;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+
 
 
 // Функция моргания (ошибка - быстро, нет ошибки - медленно)
@@ -108,44 +119,79 @@ void dataLogging(String str ) {
 }
 
 // Функция чтения температуры с датчика и логирования на карту
-void logTemperature(DeviceAddress deviceAddress)
+float logTemperature(DeviceAddress deviceAddress)
 {  
   float tempC = sensors.getTempC(deviceAddress);
-  String logString = "Температура почвы1: ";
+  String logString = "Температура почвы: ";
   logString += String(tempC);
   dataLogging(logString);
+  return tempC;
 }
 
 
 
 void setup() {
+
+  lcd.begin(16, 2);
+    
   #if defined (Debug)
       // start serial port
      Serial.begin(9600);
      Serial.println("Debug mode: включено");
   #endif
   
-  DateTime now = rtc.now();
-  // Устанавливаем переменные
-  timeForDelay = now.unixtime()-logTimer*60;
-  count = 1;
-
-  // активизурем выходы светодиодов
-  pinMode(greenLEDpin, OUTPUT);   
-  pinMode(redLEDpin, OUTPUT);   
-
-    #if defined (Debug)
+  #if defined (Debug)
        Serial.println("Запускаем часы"); 
-    #endif   
+  #endif  
+  
+  lcd.setCursor(0, 0);
+  lcd.print("Starting Clock");
+
   statusBlink(rtc.begin()) ;
   delay(1000);
+  lcd.setCursor(0, 1);
+  lcd.print("working"); 
+
   statusBlink(rtc.isrunning());
   delay(3000);
-
+  
+  DateTime now = rtc.now();
+  // Устанавливаем переменные
+  timeForDelay = now.unixtime()-logTimer*61;
+  count = 1;
     #if defined (Debug)
-       Serial.println("Проверяем SD-карту"); 
+       Serial.print("Время начала: \t"); 
+       Serial.println(timeForDelay); 
     #endif   
+  // активизурем выходы светодиодов
+  pinMode(greenLEDpin, OUTPUT);   
+  pinMode(redLEDpin, OUTPUT); 
+  // Активизируем вход для датчика влажности почвы  
+//  pinMode(HumEarthPIN, INPUT);
+  pinMode(HumEarthPIN, OUTPUT);
+  pinMode(HumEarthAPIN, INPUT);
+
+
+  #if defined (Debug)
+       Serial.println("Проверяем SD-карту"); 
+  #endif   
   sdStatus = SD.begin(SD_CHIP_SELECT);
+  
+  if (sdStatus) {
+    #if defined (Debug) 
+       Serial.println("SD-карта работает"); 
+    #endif
+    lcd.setCursor(0, 1);
+    lcd.print("SD working");
+  } else {
+    #if defined (Debug) 
+      Serial.println("SD-карта не работает");
+    #endif
+    lcd.setCursor(0, 1);
+    lcd.print("SD card error");
+  }
+  delay(2000);
+   
   statusBlink(sdStatus);
   delay(2000);
   
@@ -201,7 +247,7 @@ void loop() {
    
    DateTime now = rtc.now();
    // Устанавливаем переменные
-   long timeNow = now.unixtime();
+   unsigned long timeNow = now.unixtime();
    if (timeNow-timeForDelay > logTimer) {  
      // Лоигрование значения счетчика
      String dataString = "";
@@ -218,8 +264,20 @@ void loop() {
       #if defined (Debug)
        Serial.println("Логируем данные с сенсора температуры"); 
       #endif   
-      logTemperature(devAddEarthTemp);
-
+      float earthTemp = logTemperature(devAddEarthTemp);
+      
+      // Значения с датчика влажности почвы
+//      int dh=digitalRead(HumEarthPIN);
+      digitalWrite(HumEarthPIN, HIGH);
+      delay(50);   
+      int ah=analogRead(HumEarthAPIN);
+      digitalWrite(HumEarthPIN, LOW);
+      dataString = "Влажность почвы: ";  
+      dataString += String(ah);
+      dataString += " : ";  
+      dataString += String((1024-ah)/7.74);
+      dataString += "%";  
+      dataLogging(dataString);
       // Логирование датчика температуры и влажности 
       int chk;
       #if defined (Debug)
@@ -232,14 +290,6 @@ void loop() {
       // Read temperature as Celsius (the default)
       float t = dht.readTemperature();
        
-      #if defined (Debug)
-          Serial.print("Влажность: ");
-          Serial.print(h);
-          Serial.print(" %\t");
-          Serial.print("Температура: ");
-          Serial.print(t);
-          Serial.println(" *C ");
-      #endif
       dataString = "Влажность воздуха:";  
       dataString += String(h);
       dataLogging(dataString);
@@ -247,6 +297,24 @@ void loop() {
       dataString += String(t);
       dataLogging(dataString);
 
+
+
+      // Вывод значений на экран 
+      dataString = "З:";   
+      dataString += String(earthTemp);
+      dataString += "C  ";  
+      dataString += String((1024-ah)/7.74);   
+      dataString += "%";  
+      lcd.setCursor(0, 0);
+      lcd.print(dataString);
+      dataString = "В:";   
+      dataString += String(t);
+      dataString += "C  ";  
+      dataString += String(h);   
+      dataString += "%";  
+      lcd.setCursor(0, 1);
+      lcd.print(dataString);
+      
       timeForDelay = timeNow;
          
       delay(5000);

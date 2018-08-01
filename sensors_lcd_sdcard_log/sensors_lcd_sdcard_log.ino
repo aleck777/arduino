@@ -1,4 +1,4 @@
-#define Debug 1 // При расскоментаривании диагностическая информация будет попадать в сом-порт 
+//#define Debug 1 // При расскоментаривании диагностическая информация будет попадать в сом-порт 
 
 // int PLATE_LED = 13; // Светодиод на плате, для диагностики работы
 
@@ -10,12 +10,16 @@
 #define earth_ds18b20 32 // пин для датчика почвы
 #define DHT11_PIN 22
 #define DHTTYPE DHT11
-#define logTimer  10   // количество секунд для следующей записи
 #define HumEarthPIN 31   // PIN для подключения датчика влажности почвы (питание)
 #define HumEarthDPIN 33  // PIN для подключения датчика влажности почвы (значение полива)
 #define HumEarthAPIN A13   // PIN для подключения датчика влажности почвы
 
-#define relayPIN 29   // PIN для подключения релюшки
+#define relayPIN 46
+// PIN для подключения релюшки
+
+#define logTimer  900   // количество секунд для следующей записи
+#define waitTimer  30   // количество секунд для следующей записи
+#define polivTimer  5   // количество секунд для следующей записи
 
 // include the SD library:
 #include <SPI.h>
@@ -234,6 +238,7 @@ void setup() {
 
 
 void loop() {
+  lcd.begin(16, 2);
   String dataString ;
   #if defined (Debug)
    Serial.print("Цикл: ");
@@ -323,13 +328,17 @@ void loop() {
       delay(1000);
     if ((earthHum<69) and (dh==1) ) {
       digitalWrite(relayPIN, HIGH);
+      delay(1000);
+      dataLogging("Полив включен");
       lcd.setCursor(0, 1);
       lcd.print("Relay ON         ");
-      delay(5000); // Задержка полива       
+      delay(polivTimer*1000); // Задержка полива       
       digitalWrite(relayPIN, LOW);
+      delay(1000);
       lcd.setCursor(0, 1);
       lcd.print("Relay OFF        ");
-      delay(5000); // Задержка перед повторным поливом
+      dataLogging("Полив выключен");
+      delay(waitTimer*1000); // Задержка перед повторным поливом
     }
      
   } 
